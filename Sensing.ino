@@ -4,15 +4,17 @@
 #include <DFRobot_DHT11.h>
 #include <BlynkSimpleEsp8266.h>
 #include <ESP8266WiFi.h>
-#include <ThingSpeak.h>
+WiFiClient client;
+// #include <ThingSpeak.h>
+const char* server = "api.thingspeak.com";
 const char* thingSpeakApiKey = "PHPHVWN1L6AWWTVO"; 
 const char* thingSpeakAddress = "api.thingspeak.com";
 DFRobot_DHT11 DHT;  
 char ssid[] = "Blynk";
 char pass[] = "#blynk123";
-int soilpin = ;  
+int soilpin = A0;  
 int motorpin = 12;
-
+int temp_threshold, humi_threshold, mp_threshold;
 #define DHT11_PIN 13
 
 void setup()
@@ -32,7 +34,15 @@ void setup()
 
   Blynk.begin(BLYNK_AUTH_TOKEN, ssid, pass);
 }
-
+BLYNK_WRITE(V3){
+  temp_threshold = param.asInt();
+}
+BLYNK_WRITE(V4){
+  humi_threshold = param.asInt();
+}
+BLYNK_WRITE(V5){
+  mp_threshold = param.asInt();
+}
 void loop()
 {
   digitalWrite(motorpin,LOW);
@@ -48,24 +58,21 @@ void loop()
   delay(1000);
   Serial.println(humi);
    Blynk.virtualWrite(V1,humi);
-   int temp_threshold = Blynk.virtualRead(V3);
-  int humi_threshold = Blynk.virtualRead(V4);
-  int mp_threshold = Blynk.virtualRead(V5);
-
   // high humidity warning
 if(humi>50){
     Serial.print("HIGH humidity detected");
     Blynk.logEvent("highhumidity", "High humidity detected!");
   }
-  else{digitalWrite(motorpin2,HIGH);}
-  
+  else{
+    digitalWrite(motorpin,HIGH);
+  }
   //high temp warning
     if(35<temp)
   {
     
     Serial.print("  temperature is too high!");
     Blynk.logEvent("highTemp", "High temperature detected!");
-     digitalWrite(motorpin2,HIGH);
+     digitalWrite(motorpin,HIGH);
     }
 
    int moisture_percentage = ( 100.00 - ( (analogRead(soilpin)/1023.00) * 100.00 ) );
@@ -86,20 +93,19 @@ if(humi>50){
 }
 void sendToThink(int temp, int mp, int humi){
   if (client.connect(server,80))
-                      {  
-                            
-String postStr = apiKey;
+{                
+String postStr = thingSpeakApiKey;
 postStr +="&field1=";
-postStr += String(h);
+postStr += String(humi);
 postStr +="&field2=";
 postStr += String(mp);
 postStr +="&field3=";
-postStr += String(t);
+postStr += String(temp);
 postStr += "\r\n\r\n";
 client.print("POST /update HTTP/1.1\n");
 client.print("Host: api.thingspeak.com\n");
 client.print("Connection: close\n");
- client.print("X-THINGSPEAKAPIKEY: "+apiKey+"\n");
+// client.print("X-THINGSPEAKAPIKEY: "+thingSpeakApiKey+"\n");
 client.print("Content-Type: application/x-www-form-urlencoded\n");
 client.print("Content-Length: ");
 client.print(postStr.length());
@@ -107,9 +113,9 @@ client.print("\n\n");
 client.print(postStr);
 
 Serial.print("Temperature: ");
-Serial.print(t);
+Serial.print(temp);
 Serial.print(" degrees Celcius, Humidity: ");
-Serial.print(h);
+Serial.print(humi);
 Serial.print("Moisture: ");
 Serial.print(mp);
 Serial.println("%. Send to Thingspeak.");
