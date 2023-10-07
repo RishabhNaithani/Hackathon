@@ -10,7 +10,7 @@ const char* thingSpeakAddress = "api.thingspeak.com";
 DFRobot_DHT11 DHT;  
 char ssid[] = "Blynk";
 char pass[] = "#blynk123";
-int soilpin = A0;  
+int soilpin = ;  
 int motorpin = 12;
 
 #define DHT11_PIN 13
@@ -85,8 +85,35 @@ if(humi>50){
       sendToThink(temp, moisture_percentage, humi);
 }
 void sendToThink(int temp, int mp, int humi){
-   ThingSpeak.setField(1, humi);
-  ThingSpeak.setField(2, temp);
-  ThingSpeak.setField(2, mp);
+  if (client.connect(server,80))
+                      {  
+                            
+String postStr = apiKey;
+postStr +="&field1=";
+postStr += String(h);
+postStr +="&field2=";
+postStr += String(mp);
+postStr +="&field3=";
+postStr += String(t);
+postStr += "\r\n\r\n";
+client.print("POST /update HTTP/1.1\n");
+client.print("Host: api.thingspeak.com\n");
+client.print("Connection: close\n");
+ client.print("X-THINGSPEAKAPIKEY: "+apiKey+"\n");
+client.print("Content-Type: application/x-www-form-urlencoded\n");
+client.print("Content-Length: ");
+client.print(postStr.length());
+client.print("\n\n");
+client.print(postStr);
+
+Serial.print("Temperature: ");
+Serial.print(t);
+Serial.print(" degrees Celcius, Humidity: ");
+Serial.print(h);
+Serial.print("Moisture: ");
+Serial.print(mp);
+Serial.println("%. Send to Thingspeak.");
+}
+client.stop();
   delay(60000);
 }
